@@ -1,0 +1,259 @@
+Table tb_aluno {
+  id_aluno int [pk, increment, note: 'Identificador único do aluno']
+  rgm varchar(10) [unique, not null, note: 'Registro Geral de Matrícula']
+  nome varchar(20) [not null]
+  sobrenome varchar(20) [not null]
+  data_nascimento date [not null]
+  cpf varchar(11) [unique, note: 'CPF sem pontuação']
+  sexualidade varchar(1) [note: 'F=Feminino, M=Masculino, O=Outro']
+  nacionalidade varchar(50) [not null, default: 'Brasileira']
+  status char(1) [not null, default: 'A', note: 'A=Ativo, I=Inativo, T=Transferido']
+  data_cadastro timestamp [not null, default: `now()`]
+  data_atualizacao timestamp
+  
+  indexes {
+    cpf [unique, name: 'idx_aluno_cpf']
+    (nome, sobrenome) [name: 'idx_aluno_nome']
+    status [name: 'idx_aluno_status']
+  }
+}
+
+Table tb_responsavel {
+  id_responsavel int [pk, increment]
+  cpf varchar(11) [unique, not null, note: 'CPF sem pontuação']
+  nome varchar(20) [not null]
+  sobrenome varchar(20) [not null]
+  email varchar(50) [unique]
+  data_cadastro timestamp [not null, default: `now()`]
+  
+  indexes {
+    cpf [unique, name: 'idx_responsavel_cpf']
+    email [name: 'idx_responsavel_email']
+  }
+}
+
+Table tb_aluno_responsavel {
+  id_aluno_responsavel int [pk, increment]
+  id_aluno int [not null, ref: > tb_aluno.id_aluno]
+  id_responsavel int [not null, ref: > tb_responsavel.id_responsavel]
+  parentesco varchar(20) [not null, note: 'Mãe, Pai, Avó, Tutor, etc']
+  responsavel_financeiro boolean [default: false]
+  responsavel_pedagogico boolean [default: false]
+  
+  indexes {
+    (id_aluno, id_responsavel) [unique, name: 'idx_aluno_resp_unique']
+  }
+}
+
+Table tb_telefone {
+  id_telefone int [pk, increment]
+  id_responsavel int [not null, ref: > tb_responsavel.id_responsavel]
+  ddd char(2) [not null]
+  numero varchar(10) [not null, note: 'Apenas números']
+  tipo char(1) [not null, note: 'C=Celular, R=Residencial, M=Comercial, W=WhatsApp']
+  principal boolean [default: false]
+  data_cadastro timestamp [not null, default: `now()`]
+  
+  indexes {
+    id_responsavel [name: 'idx_telefone_responsavel']
+    (ddd, numero) [name: 'idx_telefone_numero']
+  }
+}
+
+Table tb_serie {
+  id_serie int [pk, increment]
+  codigo_serie varchar(10) [unique, not null, note: '1EF, 2EF, 1EM, etc']
+  nome_serie varchar(50) [not null, note: '1º Ano Fundamental, etc']
+  nivel_ensino varchar(20) [not null, note: 'Infantil, Fundamental I, Fundamental II, Médio']
+  ordem int [not null, note: 'Ordem sequencial das séries']
+  ativo boolean [default: true]
+  
+  indexes {
+    codigo_serie [unique, name: 'idx_serie_codigo']
+    nivel_ensino [name: 'idx_serie_nivel']
+  }
+}
+
+Table tb_turma {
+  id_turma int [pk, increment]
+  codigo_turma varchar(10) [not null, note: '1A, 2B, 3C, etc']
+  nome_turma varchar(50) [not null]
+  id_serie int [not null, ref: > tb_serie.id_serie]
+  ano_letivo smallint [not null]
+  turno char(1) [not null, note: 'M=Matutino, V=Vespertino, N=Noturno, I=Integral']
+  capacidade_maxima int [default: 30]
+  sala varchar(20)
+  ativo boolean [default: true]
+  
+  indexes {
+    (codigo_turma, ano_letivo) [unique, name: 'idx_turma_codigo_ano']
+    id_serie [name: 'idx_turma_serie']
+    ano_letivo [name: 'idx_turma_ano']
+  }
+}
+
+Table tb_matricula {
+  id_matricula int [pk, increment]
+  numero_matricula varchar(20) [unique, not null, note: 'Número único da matrícula']
+  id_aluno int [not null, ref: > tb_aluno.id_aluno]
+  id_turma int [not null, ref: > tb_turma.id_turma]
+  data_matricula date [not null]
+  numero_chamada smallint
+  situacao char(1) [not null, default: 'M', note: 'M=Matriculado, C=Cursando, A=Aprovado, R=Reprovado, T=Transferido, E=Evadido']
+  data_inicio date [not null]
+  data_conclusao date
+  observacao text
+  
+  indexes {
+    numero_matricula [unique, name: 'idx_matricula_numero']
+    id_aluno [name: 'idx_matricula_aluno']
+    id_turma [name: 'idx_matricula_turma']
+    situacao [name: 'idx_matricula_situacao']
+    (id_aluno, id_turma) [unique, name: 'idx_matricula_aluno_turma']
+  }
+}
+
+Table tb_disciplina {
+  id_disciplina int [pk, increment]
+  codigo_disciplina varchar(5) [unique, not null, note: 'MAT, POR, HIS, etc']
+  nome_disciplina varchar(50) [not null]
+  descricao text
+  carga_horaria_anual int [note: 'Carga horária total anual em horas']
+  carga_horaria_semanal int [note: 'Carga horária semanal em horas']
+  id_serie int [not null, ref: > tb_serie.id_serie]
+  ativo boolean [default: true]
+  
+  indexes {
+    codigo_disciplina [unique, name: 'idx_disciplina_codigo']
+    id_serie [name: 'idx_disciplina_serie']
+    (codigo_disciplina, id_serie) [unique, name: 'idx_disciplina_codigo_serie']
+  }
+}
+
+Table tb_professor {
+  id_professor int [pk, increment]
+  matricula_funcional varchar(20) [unique, not null]
+  nome varchar(50) [not null]
+  sobrenome varchar (20) [not null]
+  cpf varchar(11) [unique, not null, note: 'CPF sem pontuação']
+  rg varchar(20)
+  data_nascimento date
+  telefone_principal varchar(15) [not null]
+  email_institucional varchar(100) [unique]
+  email_pessoal varchar(100)
+  data_admissao date [not null]
+  data_demissao date
+  formacao_academica varchar(200)
+  especializacao varchar(200)
+  situacao char(1) [not null, default: 'A', note: 'A=Ativo, I=Inativo, F=Férias, L=Licença']
+  
+  indexes {
+    cpf [unique, name: 'idx_professor_cpf']
+    matricula_funcional [unique, name: 'idx_professor_matricula']
+    email_institucional [name: 'idx_professor_email']
+    situacao [name: 'idx_professor_situacao']
+  }
+
+}
+
+Table tb_turma_disciplina_professor {
+  id_turma_disc_prof int [pk, increment]
+  id_turma int [not null, ref: > tb_turma.id_turma]
+  id_disciplina int [not null, ref: > tb_disciplina.id_disciplina]
+  id_professor int [not null, ref: > tb_professor.id_professor]
+  dia_semana smallint [note: '1=Segunda, 2=Terça, ..., 7=Domingo']
+  horario_inicio time
+  horario_fim time
+  sala varchar(20)
+  
+  indexes {
+    (id_turma, id_disciplina) [name: 'idx_tdp_turma_disc']
+    id_professor [name: 'idx_tdp_professor']
+    (id_turma, id_disciplina, id_professor) [unique, name: 'idx_tdp_unique']
+  }
+}
+
+Table tb_periodo_letivo {
+  id_periodo_letivo int [pk, increment]
+  ano_letivo smallint [not null]
+  tipo_periodo char(1) [not null, note: 'B=Bimestre, T=Trimestre, S=Semestre']
+  numero_periodo smallint [not null, note: '1, 2, 3 ou 4']
+  data_inicio date [not null]
+  data_fim date [not null]
+  descricao varchar(50)
+  
+  indexes {
+    (ano_letivo, tipo_periodo, numero_periodo) [unique, name: 'idx_periodo_unique']
+    ano_letivo [name: 'idx_periodo_ano']
+  }
+}
+
+Table tb_avaliacao {
+  id_avaliacao int [pk, increment]
+  id_turma int [not null, ref: > tb_turma.id_turma]
+  id_disciplina int [not null, ref: > tb_disciplina.id_disciplina]
+  id_periodo_letivo int [not null, ref: > tb_periodo_letivo.id_periodo_letivo]
+  id_professor int [not null, ref: > tb_professor.id_professor]
+  tipo_avaliacao varchar(20) [not null, note: 'Prova, Trabalho, Seminário, etc']
+  descricao varchar(100)
+  data_avaliacao date [not null]
+  valor_maximo decimal(5,2) [not null]
+  peso decimal(3,2) [default: 1.00]
+  
+  indexes {
+    id_turma [name: 'idx_avaliacao_turma']
+    id_disciplina [name: 'idx_avaliacao_disciplina']
+    id_periodo_letivo [name: 'idx_avaliacao_periodo']
+  }
+}
+
+Table tb_nota {
+  id_nota int [pk, increment]
+  id_avaliacao int [not null, ref: > tb_avaliacao.id_avaliacao]
+  id_matricula int [not null, ref: > tb_matricula.id_matricula]
+  nota_obtida decimal(5,2)
+  data_lancamento timestamp [not null, default: `now()`]
+  id_professor_lancamento int [ref: > tb_professor.id_professor]
+  observacao text
+  situacao char(1) [default: 'P', note: 'P=Pendente, L=Lançada, R=Retificada']
+  
+  indexes {
+    (id_avaliacao, id_matricula) [unique, name: 'idx_nota_av_matricula']
+    id_matricula [name: 'idx_nota_matricula']
+    id_avaliacao [name: 'idx_nota_avaliacao']
+  }
+}
+
+Table tb_frequencia {
+  id_frequencia int [pk, increment]
+  id_matricula int [not null, ref: > tb_matricula.id_matricula]
+  id_turma_disc_prof int [not null, ref: > tb_turma_disciplina_professor.id_turma_disc_prof]
+  data_aula date [not null]
+  horario_inicio time
+  horario_fim time
+  presente boolean [not null, default: true]
+  justificativa text
+  data_lancamento timestamp [not null, default: `now()`]
+  
+  indexes {
+    (id_matricula, id_turma_disc_prof, data_aula) [unique, name: 'idx_freq_unique']
+    id_matricula [name: 'idx_freq_matricula']
+    data_aula [name: 'idx_freq_data']
+  }
+}
+
+Table tb_historico_escolar {
+  id_historico int [pk, increment]
+  id_aluno int [not null, ref: > tb_aluno.id_aluno]
+  id_serie int [not null, ref: > tb_serie.id_serie]
+  ano_letivo smallint [not null]
+  resultado_final char(1) [not null, note: 'A=Aprovado, R=Reprovado, T=Transferido']
+  media_final decimal(4,2)
+  percentual_frequencia decimal(5,2)
+  observacao text
+  
+  indexes {
+    id_aluno [name: 'idx_historico_aluno']
+    (id_aluno, ano_letivo) [name: 'idx_historico_aluno_ano']
+  }
+}
